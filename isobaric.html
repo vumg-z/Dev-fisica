@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Isobaric Process Simulation</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+        }
+        button {
+            margin: 5px;
+            padding: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <p><strong>Isobaric Process Simulation</strong></p>
+        <p>Volume: <span id="volume">10</span> units</p>
+        <p>Heat Added: <span id="heatAdded">0</span> units</p>
+        <p>Pressure: <span id="pressure">1</span> (constant)</p>
+    </div>
+    <div id="controls">
+        <button id="addHeat">Add Heat</button>
+        <button id="removeHeat">Remove Heat</button>
+        <button id="autoOscillate">Auto Oscillate</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+
+
+
+        // Set up scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Add ambient light and point light
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0xFFFFFF, 1.5, 100);
+        pointLight.position.set(10, 20, 10);
+        scene.add(pointLight);
+
+        // Create a ground plane
+        const planeGeometry = new THREE.PlaneGeometry(20, 20);
+        const planeMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.y = -5;
+        scene.add(plane);
+
+        // Create the cylinder (transparent)
+        const geometryCylinder = new THREE.CylinderGeometry(3, 3, 10, 32, 1, true);
+        const materialCylinder = new THREE.MeshPhongMaterial({ 
+            color: 0x888888, 
+            transparent: true, 
+            opacity: 0.3, 
+            side: THREE.DoubleSide 
+        });
+        const cylinder = new THREE.Mesh(geometryCylinder, materialCylinder);
+        cylinder.position.y = 0;
+        scene.add(cylinder);
+
+        // Create the piston (solid)
+        const geometryPiston = new THREE.CylinderGeometry(2.9, 2.9, 1, 32);
+        const materialPiston = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+        const piston = new THREE.Mesh(geometryPiston, materialPiston);
+        piston.position.y = 3.5; // Initial position of the piston
+        scene.add(piston);
+
+        // Create gas inside the cylinder (a particle system)
+        const gasParticles = new THREE.Group();
+        const gasMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+        for (let i = 0; i < 100; i++) {
+            const gasParticleGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            const gasParticle = new THREE.Mesh(gasParticleGeometry, gasMaterial);
+            gasParticle.position.set(
+                (Math.random() - 0.5) * 5,
+                (Math.random() - 0.5) * 10,
+                (Math.random() - 0.5) * 5
+            );
+            gasParticles.add(gasParticle);
+        }
+        scene.add(gasParticles);
+
+        // Position the camera for a better view
+        camera.position.set(10, 10, 20);
+        camera.lookAt(0, 0, 0);
+
+        // Variables for simulation
+        let volume = 10; // Initial volume (arbitrary units)
+        let pressure = 1; // Constant pressure (arbitrary units)
+        let heatAdded = 0; // Heat added to the system
+        let speed = .2; // Increase the speed of volume change for better visibility
+        const maxPistonHeight = 4.5; // Maximum height the piston can reach
+        const minPistonHeight = 0.5; // Minimum height the piston can reach
+        let particleSpeed = 0.1; // Initial particle speed, based on heat
+        let oscillating = false; // Flag to control oscillation
+
+        // Update the text elements
+        function updateText() {
+            document.getElementById('volume').textContent = volume.toFixed(2);
+            document.getElementById('heatAdded').textContent = heatAdded.toFixed(2);
+            document.getElementById('pressure').textContent = pressure.toFixed(2);
+        }
+
+        // Function to add heat
+        function addHeat() {
+            heatAdded += speed;
+            updatePiston();
+            updateParticleSpeed();
+        }
+
+        // Function to remove heat
+        function removeHeat() {
+            heatAdded = Math.max(0, heatAdded - speed); // Ensure heat added doesn't go below zero
+            updatePiston();
+            updateParticleSpeed();
+        }
+
+        // Function to start the oscillation
+        function autoOscillate() {
+            if (!oscillating) {
+                oscillating = true;
+                oscillate();
+            }
+        }
+
+        // Oscillation logic
+        function oscillate() {
+            if (!oscillating) return;
+
+            if (piston.position.y >= maxPistonHeight) {
+                speed = -Math.abs(speed); // Reverse direction to remove heat
+            } else if (piston.position.y <= minPistonHeight) {
+                speed = Math.abs(speed); // Reverse direction to add heat
+            }
+
+            heatAdded += speed;
+            updatePiston();
+            updateParticleSpeed();
+
+            if (oscillating) {
+                requestAnimationFrame(oscillate);
+            }
+        }
+
+        // Stop oscillation when heat is manually added or removed
+        function stopOscillation() {
+            oscillating = false;
+        }
+
+        // Update the piston's position based on the heat added
+        function updatePiston() {
+            volume = 10 + heatAdded; // Linear relation between heat added and volume (simplified)
+            piston.position.y = Math.min(maxPistonHeight, Math.max(minPistonHeight, volume / 10)); // Limit piston movement
+            updateText();
+        }
+
+        // Update particle speed based on heat
+        function updateParticleSpeed() {
+            particleSpeed = 0.1 + heatAdded * 0.02; // Increase particle speed as heat increases
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Update gas particle positions to simulate motion (Brownian motion)
+            gasParticles.children.forEach(particle => {
+                particle.position.y += (Math.random() - 0.5) * particleSpeed;
+                particle.position.x += (Math.random() - 0.5) * particleSpeed;
+                particle.position.z += (Math.random() - 0.5) * particleSpeed;
+
+                // Constrain particles within the cylinder
+                const radius = Math.sqrt(particle.position.x * particle.position.x + particle.position.z * particle.position.z);
+                const maxRadius = 2.9; // Slightly less than the cylinder's radius to keep particles inside
+
+                // Constrain particle within cylinder's radius
+                if (radius > maxRadius) {
+                    const scale = maxRadius / radius;
+                    particle.position.x *= scale;
+                    particle.position.z *= scale;
+                }
+
+                // Constrain particle within the height limits (piston and base of the cylinder)
+                if (particle.position.y > piston.position.y - 0.5) particle.position.y = piston.position.y - 0.5;
+                if (particle.position.y < -5) particle.position.y = -5;
+            });
+
+            // Render the scene
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Add event listeners for buttons
+        document.getElementById('addHeat').addEventListener('click', () => {
+            stopOscillation();
+            addHeat();
+        });
+        document.getElementById('removeHeat').addEventListener('click', () => {
+            stopOscillation();
+            removeHeat();
+        });
+        document.getElementById('autoOscillate').addEventListener('click', autoOscillate);
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
+    </script>
+</body>
+</html>
