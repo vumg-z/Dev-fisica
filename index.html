@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Simulations</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        
+        h1 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        a {
+            text-decoration: none;
+            color: #007BFF;
+            font-size: 18px;
+            border: 2px solid #007BFF;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        a:hover {
+            background-color: #007BFF;
+            color: #fff;
+        }
+
+        .cube {
+            width: 100px;
+            height: 100px;
+            transform-style: preserve-3d;
+            transform: rotateX(45deg) rotateY(45deg);
+            animation: rotate 5s infinite linear;
+            margin-bottom: 40px;
+        }
+
+        .cube div {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid black;
+        }
+
+        .cube .front  { transform: translateZ(50px); }
+        .cube .back   { transform: rotateY(180deg) translateZ(50px); }
+        .cube .left   { transform: rotateY(-90deg) translateZ(50px); }
+        .cube .right  { transform: rotateY(90deg) translateZ(50px); }
+        .cube .top    { transform: rotateX(90deg) translateZ(50px); }
+        .cube .bottom { transform: rotateX(-90deg) translateZ(50px); }
+
+        @keyframes rotate {
+            from { transform: rotateX(45deg) rotateY(45deg); }
+            to { transform: rotateX(45deg) rotateY(405deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cube">
+        <div class="front"></div>
+        <div class="back"></div>
+        <div class="left"></div>
+        <div class="right"></div>
+        <div class="top"></div>
+        <div class="bottom"></div>
+    </div>
+
+    <h1>Physics Simulations</h1>
+    <nav>
+        <a href="adiabatic.html">Adiabatic Process</a>
+        <a href="isobaric.html">Isobaric Process</a>
+        <a href="isocoric.html">Isochoric Process</a>
+        <a href="isothermal.html">Isothermal Process</a>
+    </nav>
+
+</body>
+</html>

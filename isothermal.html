@@ -39,14 +39,13 @@
 <body>
     <div id="info">
         <p><strong>Isothermal Process Simulation</strong></p>
-        <p>Volume: <span id="volume">10.00</span> units</p>
-        <p>Pressure: <span id="pressure">1.00</span> units</p>
-        <p>Internal Energy: <span id="internalEnergy">10.00</span> units</p>
-        <p>Temperature: <span id="temperature">300.00</span> K</p> <!-- Constant temperature -->
+        <p>Volume: <span id="volume">10</span> units</p>
+        <p>Temperature: <span id="temperature">300</span> K (constant)</p>
+        <p>Pressure: <span id="pressure">1</span> units</p>
     </div>
     <div id="controls">
-        <button id="compress">Compress Gas</button>
-        <button id="expand">Expand Gas</button>
+        <button id="expand">Expand Volume</button>
+        <button id="compress">Compress Volume</button>
         <button id="autoOscillate">Auto Oscillate</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -114,39 +113,34 @@
 
         // Variables for simulation
         let volume = 10; // Initial volume (arbitrary units)
+        const temperature = 300; // Constant temperature (in Kelvin)
         let pressure = 1; // Initial pressure (arbitrary units)
-        let internalEnergy = 10; // Internal energy (arbitrary units)
-        let speed = 0.2; // Speed of volume change
-        const maxVolume = 15; // Maximum allowable volume
-        const minVolume = 1; // Minimum allowable volume
+        const speed = 0.2; // Volume change speed for better visibility
         const maxPistonHeight = 4.5; // Maximum height the piston can reach
         const minPistonHeight = 0.5; // Minimum height the piston can reach
-        let particleSpeed = 0.1; // Initial particle speed, based on internal energy
+        let particleSpeed = 0.1; // Initial particle speed, based on pressure
         let oscillating = false; // Flag to control oscillation
-        
-        const temperature = 300; // Constant temperature (arbitrary units)
-        const n = 1; // Number of moles of gas (arbitrary, can be adjusted)
-        const R = 8.314; // Universal gas constant (J/(mol·K))
 
+        // Update the text elements
         function updateText() {
             document.getElementById('volume').textContent = volume.toFixed(2);
             document.getElementById('pressure').textContent = pressure.toFixed(2);
-            document.getElementById('internalEnergy').textContent = internalEnergy.toFixed(2);
-            document.getElementById('temperature').textContent = temperature.toFixed(2); // Display temperature
         }
 
-        // Function to compress the gas
-        function compressGas() {
-            volume = Math.max(volume - speed, minVolume); // Ensure volume doesn't go below minVolume
+        // Function to expand volume
+        function expandVolume() {
+            volume += speed;
             updatePiston();
-            updateInternalEnergyAndPressure();
+            updatePressure();
+            updateParticleSpeed();
         }
 
-        // Function to expand the gas
-        function expandGas() {
-            volume = Math.min(volume + speed, maxVolume); // Ensure volume doesn't go above maxVolume
+        // Function to compress volume
+        function compressVolume() {
+            volume = Math.max(1, volume - speed); // Ensure volume doesn't go below a certain value
             updatePiston();
-            updateInternalEnergyAndPressure();
+            updatePressure();
+            updateParticleSpeed();
         }
 
         // Function to start the oscillation
@@ -161,43 +155,41 @@
         function oscillate() {
             if (!oscillating) return;
 
-            if (piston.position.y >= maxPistonHeight || volume >= maxVolume) {
-                speed = -Math.abs(speed); // Reverse direction to compress
-            } else if (piston.position.y <= minPistonHeight || volume <= minVolume) {
-                speed = Math.abs(speed); // Reverse direction to expand
+            if (piston.position.y >= maxPistonHeight) {
+                speed = -Math.abs(speed); // Reverse direction to compress volume
+            } else if (piston.position.y <= minPistonHeight) {
+                speed = Math.abs(speed); // Reverse direction to expand volume
             }
 
             volume += speed;
             updatePiston();
-            updateInternalEnergyAndPressure();
+            updatePressure();
+            updateParticleSpeed();
 
             if (oscillating) {
                 requestAnimationFrame(oscillate);
             }
         }
 
-        // Stop oscillation when gas is manually compressed or expanded
+        // Stop oscillation when volume is manually expanded or compressed
         function stopOscillation() {
             oscillating = false;
         }
 
         // Update the piston's position based on the volume
         function updatePiston() {
-            piston.position.y = Math.min(maxPistonHeight, Math.max(minPistonHeight, (volume - minVolume) / (maxVolume - minVolume) * (maxPistonHeight - minPistonHeight) + minPistonHeight)); // Limit piston movement
+            piston.position.y = Math.min(maxPistonHeight, Math.max(minPistonHeight, volume / 10)); // Limit piston movement
             updateText();
         }
 
-        function updateInternalEnergyAndPressure() {
-            // In an isothermal process, temperature is constant
-            // Use the ideal gas law: PV = nRT
-            pressure = (n * R * temperature) / volume; // Calculate pressure based on constant temperature
-            internalEnergy = pressure * volume; // Internal energy is proportional to pressure and volume
-            updateParticleSpeed();
-            updateText();
+        // Update pressure based on volume (Isothermal process: P ∝ 1/V)
+        function updatePressure() {
+            pressure = 10 / volume; // Simple inverse relation between pressure and volume
         }
 
+        // Update particle speed based on pressure
         function updateParticleSpeed() {
-            particleSpeed = 0.1 + pressure * 0.01; // Adjust particle speed based on pressure
+            particleSpeed = 0.1 + pressure * 0.05; // Increase particle speed as pressure increases
         }
 
         function animate() {
@@ -205,36 +197,52 @@
 
             // Update gas particle positions to simulate motion (Brownian motion)
             gasParticles.children.forEach(particle => {
-                particle.position.x += (Math.random() - 0.5) * particleSpeed;
                 particle.position.y += (Math.random() - 0.5) * particleSpeed;
+                particle.position.x += (Math.random() - 0.5) * particleSpeed;
                 particle.position.z += (Math.random() - 0.5) * particleSpeed;
 
-                // Bounce particles off the walls
-                ['x', 'y', 'z'].forEach(axis => {
-                    if (Math.abs(particle.position[axis]) > 5) {
-                        particle.position[axis] = Math.sign(particle.position[axis]) * 5;
-                    }
-                });
+                // Constrain particles within the cylinder
+                const radius = Math.sqrt(particle.position.x * particle.position.x + particle.position.z * particle.position.z);
+                const maxRadius = 2.9; // Slightly less than the cylinder's radius to keep particles inside
+
+                // Constrain particle within cylinder's radius
+                if (radius > maxRadius) {
+                    const scale = maxRadius / radius;
+                    particle.position.x *= scale;
+                    particle.position.z *= scale;
+                }
+
+                // Constrain particle within the height limits (piston and base of the cylinder)
+                if (particle.position.y > piston.position.y - 0.5) particle.position.y = piston.position.y - 0.5;
+                if (particle.position.y < -5) particle.position.y = -5;
             });
 
+            // Render the scene
             renderer.render(scene, camera);
         }
 
-        // Event listeners for buttons
-        document.getElementById('compress').addEventListener('click', () => {
-            stopOscillation();
-            compressGas();
-        });
+        animate();
 
+        // Add event listeners for buttons
         document.getElementById('expand').addEventListener('click', () => {
             stopOscillation();
-            expandGas();
+            expandVolume();
+       
         });
-
+        document.getElementById('compress').addEventListener('click', () => {
+            stopOscillation();
+            compressVolume();
+        });
         document.getElementById('autoOscillate').addEventListener('click', autoOscillate);
 
-        // Start animation loop
-        animate();
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
     </script>
 </body>
 </html>
