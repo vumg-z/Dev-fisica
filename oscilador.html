@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulación Avanzada de Ondas Estacionarias en una Cuerda</title>
     <style>
-        body { margin: 0; background-color: #1e1e1e; }
+        body { margin: 0; background-color: #e3dfdf; }
         canvas { display: block; }
         #info {
             position: absolute;
@@ -17,7 +17,7 @@
             font-family: Arial, sans-serif;
             font-size: 16px;
             color: #333;
-            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
+            box-shadow: 0px 0px 15px rgba(224, 224, 224, 0.5);
         }
         #controls {
             position: absolute;
@@ -90,8 +90,9 @@
         document.body.appendChild(renderer.domElement);
 
         // Añadir iluminación
-        const ambientLight = new THREE.AmbientLight(0x404040, 1.5); // Luz ambiental
+        const ambientLight = new THREE.AmbientLight(0x404040, 2); // Luz ambiental
         scene.add(ambientLight);
+
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(0, 10, 10);
@@ -99,7 +100,8 @@
 
         // Crear el soporte de la cuerda
         const supportGeometry = new THREE.BoxGeometry(0.1, 1, 0.1);
-        const supportMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+        const supportMaterial = new THREE.MeshPhongMaterial({ color: 0x458B13 }); 
+
         const leftSupport = new THREE.Mesh(supportGeometry, supportMaterial);
         leftSupport.position.set(-0.6, 0, 0);
         scene.add(leftSupport);
@@ -120,6 +122,8 @@
         const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
         const line = new THREE.Line(geometry, material);
         scene.add(line);
+
+        scene.background = new THREE.Color(0xffffff);
 
         // Posicionar la cámara
         camera.position.set(0, 2, 5);
