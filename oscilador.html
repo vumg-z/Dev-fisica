@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulación Avanzada de Ondas Estacionarias en una Cuerda</title>
     <style>
-        body { margin: 0; background-color: #e3dfdf; }
+        body { 
+            margin: 0; 
+            background-color: #ffffff; /* Fondo blanco */
+        }
         canvas { display: block; }
         #info {
             position: absolute;
@@ -17,7 +20,7 @@
             font-family: Arial, sans-serif;
             font-size: 16px;
             color: #333;
-            box-shadow: 0px 0px 15px rgba(224, 224, 224, 0.5);
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
         }
         #controls {
             position: absolute;
@@ -84,19 +87,24 @@
     <script>
         // Configuración básica de la escena
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff); // Fondo blanco
+
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
+        // Crear un grupo para todos los objetos de la escena
+        const sceneGroup = new THREE.Group();
+        scene.add(sceneGroup);
+
         // Añadir iluminación
         const ambientLight = new THREE.AmbientLight(0x404040, 2); // Luz ambiental
-        scene.add(ambientLight);
-
+        sceneGroup.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(0, 10, 10);
-        scene.add(directionalLight);
+        sceneGroup.add(directionalLight);
 
         // Crear el soporte de la cuerda
         const supportGeometry = new THREE.BoxGeometry(0.1, 1, 0.1);
@@ -104,11 +112,11 @@
 
         const leftSupport = new THREE.Mesh(supportGeometry, supportMaterial);
         leftSupport.position.set(-0.6, 0, 0);
-        scene.add(leftSupport);
+        sceneGroup.add(leftSupport);
 
         const rightSupport = new THREE.Mesh(supportGeometry, supportMaterial);
         rightSupport.position.set(0.6, 0, 0);
-        scene.add(rightSupport);
+        sceneGroup.add(rightSupport);
 
         // Crear la cuerda como una línea
         const numPoints = 300; // Mayor cantidad de puntos para mayor suavidad
@@ -119,11 +127,9 @@
             points.push(new THREE.Vector3(x, 0, 0));
         }
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+        const material = new THREE.LineBasicMaterial({ color: 0xff0000, vertexColors: true }); // Habilitar colores por vértice
         const line = new THREE.Line(geometry, material);
-        scene.add(line);
-
-        scene.background = new THREE.Color(0xffffff);
+        sceneGroup.add(line);
 
         // Posicionar la cámara
         camera.position.set(0, 2, 5);
@@ -151,8 +157,8 @@
 
         function createMarkers() {
             // Limpiar marcadores existentes
-            nodes.forEach(marker => scene.remove(marker));
-            antinodes.forEach(marker => scene.remove(marker));
+            nodes.forEach(marker => sceneGroup.remove(marker));
+            antinodes.forEach(marker => sceneGroup.remove(marker));
             nodes.length = 0;
             antinodes.length = 0;
 
@@ -161,7 +167,7 @@
                 const x = (-0.5 + (i / mode)) * length;
                 const node = new THREE.Mesh(sphereGeometry, nodeMaterial);
                 node.position.set(x, 0, 0);
-                scene.add(node);
+                sceneGroup.add(node);
                 nodes.push(node);
             }
 
@@ -170,7 +176,7 @@
                 const x = (-0.5 + (i - 0.5) / mode) * length;
                 const antinode = new THREE.Mesh(sphereGeometry, antinodeMaterial);
                 antinode.position.set(x, 0, 0);
-                scene.add(antinode);
+                sceneGroup.add(antinode);
                 antinodes.push(antinode);
             }
         }
@@ -260,11 +266,28 @@
             A = parseFloat(this.value);
         });
 
-        // Crear nodos y antinodos en la escena
-        // (ya se crearon en createMarkers())
-
         // Variables para la animación
         let time = 0;
+
+        // Variables para la rotación de la escena
+        let isRotating = false;
+        const rotationSpeed = 0.005; // Velocidad de rotación
+
+        // Referencia al canvas de Three.js
+        const canvas = renderer.domElement;
+
+        // Añadir eventos de clic y hover
+        canvas.addEventListener('click', () => {
+            isRotating = !isRotating; // Alternar rotación al hacer clic
+        });
+
+        canvas.addEventListener('mouseenter', () => {
+            isRotating = true; // Iniciar rotación al pasar el cursor
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isRotating = false; // Detener rotación al quitar el cursor
+        });
 
         // Función de animación mejorada
         function animate() {
@@ -296,6 +319,12 @@
             } else {
                 line.geometry.attributes.color.array = new Float32Array(colors);
                 line.geometry.attributes.color.needsUpdate = true;
+            }
+
+            // Aplicar rotación si está activo
+            if (isRotating) {
+                sceneGroup.rotation.y += rotationSpeed;
+                sceneGroup.rotation.x += rotationSpeed * 0.5; // Rotación adicional en X para efecto contemplativo
             }
 
             renderer.render(scene, camera);
