@@ -1,36 +1,103 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Physics Simulations</title>
     <style>
-        body, html {
+        /* Reset de márgenes y paddings */
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
             font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             background-color: #f0f0f0;
             color: #333;
+            overflow-x: hidden;
         }
-        
+
+        /* Estilos para el menú lateral */
+        .sidenav {
+            height: 100%;
+            width: 250px;
+            position: fixed;
+            z-index: 1000;
+            top: 0;
+            left: -250px; /* Oculto por defecto */
+            background-color: #111;
+            overflow-x: hidden;
+            transition: 0.3s;
+            padding-top: 60px;
+        }
+
+        .sidenav a {
+            padding: 10px 20px;
+            text-decoration: none;
+            font-size: 18px;
+            color: #f1f1f1;
+            display: block;
+            transition: 0.3s;
+        }
+
+        .sidenav a:hover {
+            background-color: #575757;
+            color: #fff;
+        }
+
+        /* Estilos para los submenús */
+        .sidenav .submenu {
+            display: none;
+            background-color: #333;
+            padding-left: 20px;
+        }
+
+        .sidenav .submenu a {
+            font-size: 16px;
+            padding: 8px 20px;
+        }
+
+        /* Botón de menú (hamburguesa) */
+        .menu-btn {
+            font-size: 30px;
+            cursor: pointer;
+            color: #111;
+            padding: 10px 20px;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1100;
+            background-color: #fff;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .menu-btn:hover {
+            background-color: #ddd;
+        }
+
+        /* Estilos para el contenido principal */
+        .main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+            transition: margin-left 0.3s;
+        }
+
         h1 {
-            margin-bottom: 20px;
+            margin-top: 20px;
+            margin-bottom: 40px;
             text-align: center;
         }
 
-        nav {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-
-        a {
+        nav a {
             text-decoration: none;
             color: #007BFF;
             font-size: 18px;
@@ -38,13 +105,18 @@
             padding: 10px 20px;
             border-radius: 5px;
             transition: all 0.3s ease;
+            margin: 5px 0;
+            display: block;
+            width: 100%;
+            text-align: left;
         }
 
-        a:hover {
+        nav a:hover {
             background-color: #007BFF;
             color: #fff;
         }
 
+        /* Estilos para el cubo rotatorio */
         .cube {
             width: 100px;
             height: 100px;
@@ -73,26 +145,115 @@
             from { transform: rotateX(45deg) rotateY(45deg); }
             to { transform: rotateX(45deg) rotateY(405deg); }
         }
+
+        /* Responsividad para pantallas pequeñas */
+        @media screen and (max-width: 768px) {
+            .sidenav {
+                width: 200px;
+                left: -200px;
+            }
+
+            .sidenav a {
+                font-size: 16px;
+            }
+
+            .menu-btn {
+                font-size: 24px;
+                padding: 8px 16px;
+            }
+
+            nav a {
+                font-size: 16px;
+                padding: 8px 16px;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <div class="cube">
-        <div class="front"></div>
-        <div class="back"></div>
-        <div class="left"></div>
-        <div class="right"></div>
-        <div class="top"></div>
-        <div class="bottom"></div>
+    <!-- Botón de menú (hamburguesa) -->
+    <button class="menu-btn" onclick="toggleMenu()">☰</button>
+
+    <!-- Menú lateral -->
+    <div id="mySidenav" class="sidenav">
+        <a href="javascript:void(0)" onclick="closeMenu()">× Cerrar</a>
+        <a href="#">Proyectos</a>
+        <div>
+            <a href="#" onclick="toggleSubmenu('thermoSubmenu')">Termodinámica ▼</a>
+            <div id="thermoSubmenu" class="submenu">
+                <a href="adiabatic.html">Proceso Adiabático</a>
+                <a href="isobaric.html">Proceso Isobárico</a>
+                <a href="isocoric.html">Proceso Isochórico</a>
+                <a href="isothermal.html">Proceso Isotérmico</a>
+            </div>
+        </div>
+        <a href="oscilador.html">Oscilador</a>
     </div>
 
-    <h1>Physics Simulations</h1>
-    <nav>
-        <a href="adiabatic.html">Adiabatic Process</a>
-        <a href="isobaric.html">Isobaric Process</a>
-        <a href="isocoric.html">Isochoric Process</a>
-        <a href="isothermal.html">Isothermal Process</a>
-    </nav>
+    <!-- Contenido principal -->
+    <div class="main">
+        <div class="cube">
+            <div class="front"></div>
+            <div class="back"></div>
+            <div class="left"></div>
+            <div class="right"></div>
+            <div class="top"></div>
+            <div class="bottom"></div>
+        </div>
 
+        <h1>Physics Simulations</h1>
+        <!-- El menú ahora está en el lateral, por lo que no es necesario duplicar los enlaces aquí -->
+        <!-- Si deseas mantener los enlaces visibles en pantallas grandes, puedes duplicar el contenido o ajustar según tus necesidades -->
+    </div>
+
+    <script>
+        // Función para abrir y cerrar el menú lateral
+        function toggleMenu() {
+            const sidenav = document.getElementById("mySidenav");
+            if (sidenav.style.left === "0px") {
+                sidenav.style.left = "-250px";
+            } else {
+                sidenav.style.left = "0px";
+            }
+        }
+
+        function closeMenu() {
+            const sidenav = document.getElementById("mySidenav");
+            sidenav.style.left = "-250px";
+        }
+
+        // Función para alternar submenús
+        function toggleSubmenu(submenuId) {
+            const submenu = document.getElementById(submenuId);
+            if (submenu.style.display === "block") {
+                submenu.style.display = "none";
+            } else {
+                submenu.style.display = "block";
+            }
+        }
+
+        // Ajustar el ancho del menú según la pantalla
+        function adjustSidenav() {
+            const sidenav = document.getElementById("mySidenav");
+            const width = window.innerWidth;
+            if (width <= 768) {
+                sidenav.style.width = "200px";
+                if (sidenav.style.left === "0px") {
+                    sidenav.style.left = "0px";
+                } else {
+                    sidenav.style.left = "-200px";
+                }
+            } else {
+                sidenav.style.width = "250px";
+                if (sidenav.style.left === "0px") {
+                    sidenav.style.left = "0px";
+                } else {
+                    sidenav.style.left = "-250px";
+                }
+            }
+        }
+
+        window.addEventListener('resize', adjustSidenav);
+    </script>
 </body>
 </html>
