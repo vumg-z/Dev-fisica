@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulación Avanzada de Ondas Estacionarias en una Cuerda</title>
+    <style>
+        body { margin: 0; background-color: #1e1e1e; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            color: #333;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            color: #333;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #4287f5;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2e66d1;
+        }
+        button.active {
+            background-color: #1c3d99;
+        }
+        #amplitudeControl {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 20px;
+        }
+        #amplitudeSlider {
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <p><strong>Simulación Avanzada de Ondas Estacionarias en una Cuerda</strong></p>
+        <p>Longitud de la cuerda: <span id="length">1.20</span> m</p>
+        <p>Masa por unidad de longitud (μ): <span id="mu">0.400</span> g/m</p>
+        <p>Tensión (T): <span id="tension">200</span> N</p>
+        <p>Frecuencia seleccionada: <span id="frequency">295</span> Hz</p>
+        <p>Modo de vibración: <span id="mode">Fundamental (1 bucle)</span></p>
+        <div id="amplitudeControl">
+            <label for="amplitudeSlider"><strong>Amplitud:</strong></label>
+            <input type="range" id="amplitudeSlider" min="0.1" max="1.0" step="0.1" value="0.2">
+        </div>
+    </div>
+    <div id="controls">
+        <button onclick="setMode(1)" id="btn1">Fundamental (295 Hz)</button>
+        <button onclick="setMode(3)" id="btn3">Tres Bucles (884 Hz)</button>
+        <button onclick="setMode(5)" id="btn5">Cinco Bucles (1473 Hz)</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Configuración básica de la escena
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Añadir iluminación
+        const ambientLight = new THREE.AmbientLight(0x404040, 1.5); // Luz ambiental
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(0, 10, 10);
+        scene.add(directionalLight);
+
+        // Crear el soporte de la cuerda
+        const supportGeometry = new THREE.BoxGeometry(0.1, 1, 0.1);
+        const supportMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+        const leftSupport = new THREE.Mesh(supportGeometry, supportMaterial);
+        leftSupport.position.set(-0.6, 0, 0);
+        scene.add(leftSupport);
+
+        const rightSupport = new THREE.Mesh(supportGeometry, supportMaterial);
+        rightSupport.position.set(0.6, 0, 0);
+        scene.add(rightSupport);
+
+        // Crear la cuerda como una línea
+        const numPoints = 300; // Mayor cantidad de puntos para mayor suavidad
+        const length = 1.20; // Longitud de la cuerda en metros
+        const points = [];
+        for (let i = 0; i <= numPoints; i++) {
+            const x = (i / numPoints - 0.5) * length; // Centrado en el origen
+            points.push(new THREE.Vector3(x, 0, 0));
+        }
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+
+        // Posicionar la cámara
+        camera.position.set(0, 2, 5);
+        camera.lookAt(0, 0, 0);
+
+        // Variables de la simulación
+        let frequency = 295; // Hz (fundamental)
+        let mode = 1; // Número de bucles
+        const mu = 0.400 / 1000; // kg/m
+        const T = 200; // N
+        let A = 0.2; // Amplitud de la oscilación (ajustable)
+        let k = (mode * Math.PI) / length; // Número de onda
+        let omega = 2 * Math.PI * frequency; // Frecuencia angular
+
+        // Calcula la velocidad de la onda
+        const velocity = Math.sqrt(T / mu);
+
+        // Crear marcadores para nodos y antinodos
+        const nodeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+        const antinodeMaterial = new THREE.MeshPhongMaterial({ color: 0xff00ff });
+        const sphereGeometry = new THREE.SphereGeometry(0.02, 16, 16);
+
+        const nodes = [];
+        const antinodes = [];
+
+        function createMarkers() {
+            // Limpiar marcadores existentes
+            nodes.forEach(marker => scene.remove(marker));
+            antinodes.forEach(marker => scene.remove(marker));
+            nodes.length = 0;
+            antinodes.length = 0;
+
+            // Crear nodos (donde la amplitud es cero)
+            for (let i = 0; i <= mode; i++) {
+                const x = (-0.5 + (i / mode)) * length;
+                const node = new THREE.Mesh(sphereGeometry, nodeMaterial);
+                node.position.set(x, 0, 0);
+                scene.add(node);
+                nodes.push(node);
+            }
+
+            // Crear antinodos (donde la amplitud es máxima)
+            for (let i = 1; i <= mode; i++) {
+                const x = (-0.5 + (i - 0.5) / mode) * length;
+                const antinode = new THREE.Mesh(sphereGeometry, antinodeMaterial);
+                antinode.position.set(x, 0, 0);
+                scene.add(antinode);
+                antinodes.push(antinode);
+            }
+        }
+
+        createMarkers();
+
+        // Configurar audio
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        gainNode.gain.value = 0; // Comenzar sin sonido
+        oscillator.start();
+
+        function playSound() {
+            gainNode.gain.value = 0.1; // Ajustar volumen
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+        }
+
+        function stopSound() {
+            gainNode.gain.value = 0;
+        }
+
+        // Función para actualizar la información en pantalla
+        function updateInfo() {
+            document.getElementById('frequency').textContent = frequency;
+            let modeText = '';
+            if (mode === 1) modeText = 'Fundamental (1 bucle)';
+            else modeText = `${mode} Bucles`;
+            document.getElementById('mode').textContent = modeText;
+        }
+
+        // Función para establecer el modo de vibración
+        function setMode(n) {
+            mode = n;
+            switch(n) {
+                case 1:
+                    frequency = 295;
+                    break;
+                case 3:
+                    frequency = 884;
+                    break;
+                case 5:
+                    frequency = 1473;
+                    break;
+                default:
+                    frequency = 295;
+            }
+            // Actualizar k y omega según el nuevo modo
+            k = (mode * Math.PI) / length;
+            omega = 2 * Math.PI * frequency;
+            updateInfo();
+            updateActiveButton();
+            createMarkers();
+            playSound();
+            setTimeout(stopSound, 5000); // Emitir sonido breve al cambiar de modo
+        }
+
+        // Actualizar los botones para reflejar el modo activo
+        function updateActiveButton() {
+            document.getElementById('btn1').classList.remove('active');
+            document.getElementById('btn3').classList.remove('active');
+            document.getElementById('btn5').classList.remove('active');
+            switch(mode) {
+                case 1:
+                    document.getElementById('btn1').classList.add('active');
+                    break;
+                case 3:
+                    document.getElementById('btn3').classList.add('active');
+                    break;
+                case 5:
+                    document.getElementById('btn5').classList.add('active');
+                    break;
+            }
+        }
+
+        // Inicializar información y botones
+        updateInfo();
+        updateActiveButton();
+
+        // Manejar el control deslizante de amplitud
+        const amplitudeSlider = document.getElementById('amplitudeSlider');
+        amplitudeSlider.addEventListener('input', function() {
+            A = parseFloat(this.value);
+        });
+
+        // Crear nodos y antinodos en la escena
+        // (ya se crearon en createMarkers())
+
+        // Variables para la animación
+        let time = 0;
+
+        // Función de animación mejorada
+        function animate() {
+            requestAnimationFrame(animate);
+
+            time += 0.02; // Incremento de tiempo para la animación
+
+            // Actualizar la posición de los puntos de la cuerda usando la fórmula de ondas estacionarias
+            const positions = line.geometry.attributes.position.array;
+            for (let i = 0; i <= numPoints; i++) {
+                const x = (i / numPoints - 0.5) * length;
+                const y = 2 * A * Math.sin(k * x) * Math.cos(omega * time);
+                // Actualizar la posición Y de cada punto
+                positions[i * 3 + 1] = y;
+            }
+            line.geometry.attributes.position.needsUpdate = true;
+
+            // Cambiar el color de la cuerda basado en la amplitud
+            const colors = [];
+            for (let i = 0; i <= numPoints; i++) {
+                const y = positions[i * 3 + 1];
+                const normalizedY = (y + 2 * A) / (4 * A); // Normalizar para color
+                colors.push(1 - normalizedY, 0, normalizedY); // De rojo a azul
+            }
+            if (!line.geometry.attributes.color) {
+                const colorAttr = new THREE.BufferAttribute(new Float32Array(colors), 3);
+                line.geometry.setAttribute('color', colorAttr);
+                line.material.vertexColors = true;
+            } else {
+                line.geometry.attributes.color.array = new Float32Array(colors);
+                line.geometry.attributes.color.needsUpdate = true;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Manejar el redimensionamiento de la ventana
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
+    </script>
+</body>
+</html>
